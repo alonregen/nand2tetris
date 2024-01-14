@@ -16,7 +16,7 @@
  * Note: The outM and writeM outputs are combinational: they are affected by the
  * instruction's execution during the current cycle. The addressM and pc outputs are
  * clocked: although they are affected by the instruction's execution, they commit to
- * their new values only in the next cycle.
+ * their new values only in the next cycle.Not(in=inst15, out=w3);
  */
 CHIP CPU {
 
@@ -32,25 +32,29 @@ CHIP CPU {
         pc[15];          // Address of next instruction
 
     PARTS:
-    Mux16(a=instruction ,b=outALUMUX ,sel=instruction[15] ,out=outmux);
-    ARegister(in=outmux, load=instruction[5], out=outAregPc, out[0..14]=addressM, out=outAreg);
-    Mux16(a=outAreg ,b=inM ,sel=instruction[12] ,out=outSECmux);
-    DRegister(in=outALUMUX ,load=instruction[4] ,out=outDreg);
-    ALU(x=outDreg ,y=outSECmux ,zx=instruction[11] ,nx=instruction[10] ,zy=instruction[9] ,ny=instruction[8] ,f=instruction[7] ,no=instruction[6] ,out=outALUMUX ,out=OutM ,zr=outZR ,ng=outNg); 
-    Or(a=instruction[3] ,b=true ,out=writeM);
-
-    Or(a=outZR, b=outNg, out=outsmallZero);	
-    Not(in=outsmallZero , out=outbigzero);
-
-    And(a=instruction[0], b=outbigzero, out=JGT);
-    And(a=instruction[1], b=outZR, out=JEQ);
-    And(a=instruction[2], b=outNg, out=JLT);
-    Or8Way(in[0]=JLT, in[1]=JEQ, in[2]=JGT, in[3..7]=false, out=outLoad);
-
-    PC(in=outAregPc ,load=outLoad ,inc=true ,reset=reset ,out[0..14]=pc); 
-
-   
-
+        Mux16(a=instruction, b=outALUMUX ,sel=andFive ,out=outmux);
+        And(a=instruction[15], b=instruction[5], out=andFive);
+        Not(in=instruction[15], out=NotFifteen);
+        And(a=instruction[15], b=instruction[4], out=andFour);
+        And(a=instruction[15], b=instruction[3], out=writeM);
+        Or(a=NotFifteen, b=andFive, out=loadA);
+        ARegister(in=outmux, load=loadA, out[0..14]=addressM, out=outAreg);
+        DRegister(in=outALUMUX ,load=andFour ,out=outDreg);
+        And(a=instruction[12], b=instruction[15], out=instructionSecondmux);
+        Mux16(a=outAreg ,b=inM ,sel=instructionSecondmux ,out=outSECmux);
+        ALU(x=outDreg ,y=outSECmux ,zx=instruction[11]
+        ,nx=instruction[10] ,zy=instruction[9] 
+        ,ny=instruction[8] ,f=instruction[7] 
+        ,no=instruction[6] ,out=outALUMUX ,out=outM ,zr=outZR ,ng=outNg); 
+        Not(in=outNg, out=outNgNot);
+        Not(in=outZR, out=outZRNot);
+        And(a=outNgNot, b=outZRNot, out=possitiveNum);
+        And(a=instruction[0], b=possitiveNum, out=JLargezero);
+        And(a=instruction[1], b=outZR, out=JEqualZero);
+        And(a=instruction[2], b=outNg, out=JSmallZero);
+        Or8Way(in[0]=JLargezero, in[1]=JEqualZero, in[2]=JSmallZero, in[3..7]=false, out=orout);
+        And(a=orout, b=instruction[15], out=outLoad);
+        PC(in=outAreg ,load=outLoad ,inc=true ,reset=reset ,out[0..14]=pc); 
 
 
 }

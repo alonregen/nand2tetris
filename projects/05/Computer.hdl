@@ -13,9 +13,12 @@
  * the screen may show some output, the user may be expected to enter
  * some input using the keyboard, or the program may do some procerssing. 
  */
+
 CHIP Computer {
     IN reset;
 
     PARTS:
-    //// Replace this comment with your code.
+        ROM32K(address=romaddress, out=instruction);
+        CPU(inM=outinM, instruction=instruction, reset=reset, outM=outM, writeM=writeM, addressM=addressM, pc=romaddress);
+        Memory(in=outM, load=writeM, address=addressM, out=outinM);
 }
