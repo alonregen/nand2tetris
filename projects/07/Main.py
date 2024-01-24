@@ -35,7 +35,7 @@ def process_directory(directory):
 
 
 if __name__ == "__main__":
-    path = "/Users/alonregen/Desktop/code/nand2tetris/projects/07/StackArithmetic/StackTest/StackTest.vm" ### should be chagne
+    path = sys.argv[1]
 
     if os.path.isdir(path):
         process_directory(path)

@@ -175,7 +175,7 @@ class CodeWriter:
 
     def comparison(self):
         self.popFromStackToD()
-        asmLines = ["@SP", "M=M-1", "A=M", "D=M-D"]
+        asmLines = [ATSP, M_DECREMENT, A_ASSIGN_M, D_SUBTRACT_D_FROM_M]
         self.writeAsmLines(asmLines)
 
     def constructComparison(self, jumpCommand):
@@ -184,18 +184,16 @@ class CodeWriter:
         labelEnd = f"END{self.booleanCounter}"
         return [
             f"@{labelTrue}", jumpCommand, 
-            f"@{labelFalse}", "0;JMP", 
+            f"@{labelFalse}", JMP, 
             f"({labelTrue})", "D=-1", 
-            f"@{labelEnd}", "0;JMP", 
+            f"@{labelEnd}", JMP, 
             f"({labelFalse})", "D=0", 
             f"({labelEnd})"
         ]
 
     def pushResultToStack(self, asmLines):
-        asmLines.extend(["@SP", "A=M", "M=D", "@SP", "M=M+1"])
+        asmLines.extend([ATSP, A_ASSIGN_M, M_ASSIGN_D, ATSP, M_INCREMENT])
         self.writeAsmLines(asmLines)
-
-
 
     def writePushPop(self, c_type, segment, index):
         if c_type == "C_PUSH":
@@ -204,45 +202,41 @@ class CodeWriter:
             self.writePop(segment, index)
 
     def writePop(self, segment, index):
-        asmLines = ["@SP", "M=M-1", "A=M", "D=M"]
+        asmLines = [ATSP, M_DECREMENT, A_ASSIGN_M, D_ASSIGN_M]
         if segment in ["temp", "pointer"]:
             address = str(int(self.ramSymbol_dict[segment]) + int(index))
-            asmLines.extend(["@" + address, "M=D"])
+            asmLines.extend([AT + address, M_ASSIGN_D])
         elif segment == "static":
             static_address = self.baseFilename + "." + str(index)
-            asmLines.extend(["@" + static_address, "M=D"])
-        else:  # local, argument, this, that
+            asmLines.extend([AT + static_address, M_ASSIGN_D])
+        else:  
             asmLines.extend([
-                "@" + str(self.ramSymbol_dict[segment]), "D=M",
-                "@" + str(index), "D=D+A",
-                "@R13", "M=D",  # Use R13 as a temporary variable
-                "@SP", "A=M", "D=M",
-                "@R13", "A=M", "M=D"
+                AT + str(self.ramSymbol_dict[segment]), D_ASSIGN_M,
+                AT + str(index), D_ADD_A_TO_D,
+                AT +"R"+ TEMP, M_ASSIGN_D, 
+                ATSP, A_ASSIGN_M, D_ASSIGN_M,
+                AT +"R"+ TEMP, A_ASSIGN_M, M_ASSIGN_D
             ])
         self.writeAsmLines(asmLines)
 
     def writePush(self, segment, index):
         asmLines = []
         if segment == "constant":
-            asmLines.extend(["@" + str(index), "D=A"])
+            asmLines.extend([AT + str(index), D_ASSIGN_A])
         elif segment in ["temp", "pointer"]:
             address = str(int(self.ramSymbol_dict[segment]) + int(index))
-            asmLines.extend(["@" + address, "D=M"])
+            asmLines.extend([AT + address, D_ASSIGN_M])
         elif segment == "static":
             static_address = self.baseFilename + "." + str(index)
-            asmLines.extend(["@" + static_address, "D=M"])
-        else:  # local, argument, this, that
+            asmLines.extend([AT + static_address,  D_ASSIGN_M])
+        else: 
             asmLines.extend([
-                "@" + str(self.ramSymbol_dict[segment]), "D=M",
-                "@" + str(index), "D=D+A",
-                "A=D", "D=M"
+                AT + str(self.ramSymbol_dict[segment]),  D_ASSIGN_M,
+                AT + str(index), D_ADD_A_TO_D,
+                A_ASSIGN_D,  D_ASSIGN_M
             ])
-        asmLines.extend(["@SP", "A=M", "M=D", "@SP", "M=M+1"])
+        asmLines.extend([ATSP, A_ASSIGN_M, M_ASSIGN_D, ATSP, M_INCREMENT])
         self.writeAsmLines(asmLines)
-
-
-
-
 
     def pushTOStackFromD(self):
         asmLines = []
@@ -252,6 +246,7 @@ class CodeWriter:
         asmLines.append(ATSP)
         asmLines.append(M_INCREMENT)
         self.writeAsmLines(asmLines)
+        
     
     def popFromStackToDEST(self):
         asmLines = []
@@ -263,8 +258,8 @@ class CodeWriter:
         asmLines.append(A_ASSIGN_M)
         asmLines.append(M_ASSIGN_D)
         self.writeAsmLines(asmLines)
-    
 
+    
     def readFromAddress(self, address):
         asmLines = []
         asmLines.append(AT + str(address))
@@ -288,4 +283,5 @@ class CodeWriter:
         asmLines.append(AT + "END")
         asmLines.append(JMP)
         self.writeAsmLines(asmLines)
-    
+
+   
